@@ -64,39 +64,7 @@ template HashLeftRight() {
     hash <== hasher.out;
 }
 
-/**
- * DualMux - Multiplexer for two inputs
- * If sel = 0: out = [in0, in1]
- * If sel = 1: out = [in1, in0]
- */
-template DualMux() {
-    signal input in[2];
-    signal input sel;
-    signal output out[2];
-
-    sel * (1 - sel) === 0;  // sel must be 0 or 1
-    out[0] <== (in[1] - in[0]) * sel + in[0];
-    out[1] <== (in[0] - in[1]) * sel + in[1];
-}
-
-/**
- * Switcher - Alternative implementation using DualMux
- * Swaps L and R based on sel
- */
-template Switcher() {
-    signal input sel;
-    signal input L;
-    signal input R;
-    signal output outL;
-    signal output outR;
-
-    component mux = DualMux();
-    mux.in[0] <== L;
-    mux.in[1] <== R;
-    mux.sel <== sel;
-    outL <== mux.out[0];
-    outR <== mux.out[1];
-}
+// DualMux and Switcher are imported from circomlib/circuits/switcher.circom
 
 /**
  * MerkleTreeUpdater - For computing new root after insertion

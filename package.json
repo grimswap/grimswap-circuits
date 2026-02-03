@@ -6,15 +6,19 @@
     "compile": "./scripts/compile.sh",
     "setup": "./scripts/setup.sh",
     "generate-verifier": "./scripts/generateVerifier.sh",
-    "test": "node test/circuit.test.js",
+    "test:proof": "./scripts/testProof.sh",
+    "test": "mocha test/*.test.js --timeout 100000",
     "build": "npm run compile && npm run setup && npm run generate-verifier"
   },
   "dependencies": {
     "circomlib": "^2.0.5",
+    "circomlibjs": "^0.1.7",
     "snarkjs": "^0.7.4"
   },
   "devDependencies": {
-    "circom_tester": "^0.0.19"
+    "chai": "^4.3.10",
+    "circom_tester": "^0.0.19",
+    "mocha": "^10.2.0"
   },
   "keywords": [
     "zk-snark",

@@ -1,31 +1,52 @@
 {
   "name": "@grimswap/circuits",
   "version": "1.0.0",
-  "description": "Groth16 ZK-SNARK circuits for GrimSwap private swaps",
+  "description": "Groth16 ZK-SNARK circuits and SDK for GrimSwap private swaps",
+  "main": "dist/sdk/index.js",
+  "types": "dist/sdk/index.d.ts",
+  "exports": {
+    ".": {
+      "import": "./dist/sdk/index.js",
+      "require": "./dist/sdk/index.js",
+      "types": "./dist/sdk/index.d.ts"
+    }
+  },
+  "files": [
+    "dist",
+    "build/privateSwap_js",
+    "setup/*.zkey",
+    "setup/verification_key.json"
+  ],
   "scripts": {
     "compile": "./scripts/compile.sh",
     "setup": "./scripts/setup.sh",
     "generate-verifier": "./scripts/generateVerifier.sh",
     "test:proof": "./scripts/testProof.sh",
     "test": "mocha test/*.test.js --timeout 100000",
-    "build": "npm run compile && npm run setup && npm run generate-verifier"
+    "build:circuits": "npm run compile && npm run setup && npm run generate-verifier",
+    "build:sdk": "tsc",
+    "build": "npm run build:sdk"
   },
   "dependencies": {
     "circomlib": "^2.0.5",
     "circomlibjs": "^0.1.7",
+    "ethers": "^6.9.0",
     "snarkjs": "^0.7.4"
   },
   "devDependencies": {
+    "@types/node": "^20.10.0",
     "chai": "^4.3.10",
     "circom_tester": "^0.0.19",
-    "mocha": "^10.2.0"
+    "mocha": "^10.2.0",
+    "typescript": "^5.3.0"
   },
   "keywords": [
     "zk-snark",
     "groth16",
     "privacy",
     "defi",
-    "uniswap"
+    "uniswap",
+    "circom"
   ],
   "author": "GrimSwap",
   "license": "MIT"

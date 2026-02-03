@@ -1,0 +1,28 @@
+{
+  "name": "@grimswap/circuits",
+  "version": "1.0.0",
+  "description": "Groth16 ZK-SNARK circuits for GrimSwap private swaps",
+  "scripts": {
+    "compile": "./scripts/compile.sh",
+    "setup": "./scripts/setup.sh",
+    "generate-verifier": "./scripts/generateVerifier.sh",
+    "test": "node test/circuit.test.js",
+    "build": "npm run compile && npm run setup && npm run generate-verifier"
+  },
+  "dependencies": {
+    "circomlib": "^2.0.5",
+    "snarkjs": "^0.7.4"
+  },
+  "devDependencies": {
+    "circom_tester": "^0.0.19"
+  },
+  "keywords": [
+    "zk-snark",
+    "groth16",
+    "privacy",
+    "defi",
+    "uniswap"
+  ],
+  "author": "GrimSwap",
+  "license": "MIT"
+}

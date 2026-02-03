@@ -38,7 +38,7 @@ describe("PrivateSwap Circuit", function () {
             console.log("Commitment:", commitmentHex);
 
             expect(commitmentHex).to.be.a("string");
-            expect(BigInt(commitmentHex)).to.be.gt(0n);
+            expect(BigInt(commitmentHex) > 0n).to.be.true;
         });
     });
 
@@ -51,7 +51,7 @@ describe("PrivateSwap Circuit", function () {
             console.log("Nullifier Hash:", nullifierHashHex);
 
             expect(nullifierHashHex).to.be.a("string");
-            expect(BigInt(nullifierHashHex)).to.be.gt(0n);
+            expect(BigInt(nullifierHashHex) > 0n).to.be.true;
         });
 
         it("should produce different hashes for different nullifiers", async () => {

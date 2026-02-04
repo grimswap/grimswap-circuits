@@ -1,0 +1,17 @@
+node_modules/
+dist/
+build/
+*.log
+.env
+.env.local
+
+# Circuit build artifacts (keep in build/)
+*.r1cs
+*.sym
+*.wasm
+*.zkey
+*.wtns
+
+# But keep the final build outputs
+!build/privateSwap.zkey
+!build/privateSwap_js/

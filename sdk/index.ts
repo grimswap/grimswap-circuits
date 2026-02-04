@@ -51,6 +51,7 @@
 
 // Types
 export type {
+  // ZK Proof Types
   Groth16Proof,
   PublicSignals,
   PrivateInputs,
@@ -59,6 +60,11 @@ export type {
   ContractProof,
   MerkleProof,
   SwapParams,
+  // Stealth Address Types
+  StealthKeys,
+  GeneratedStealthAddress,
+  StealthPayment,
+  ScanParams,
 } from "./types";
 
 // Commitment functions
@@ -93,6 +99,41 @@ export {
   generateProofForRelayer,
   computeExpectedPublicSignals,
 } from "./proof";
+
+// Stealth addresses (ERC-5564)
+export {
+  generateStealthKeys,
+  generateStealthAddress,
+  checkStealthAddress,
+  deriveStealthPrivateKey,
+  parseMetaAddress,
+  createMetaAddress,
+} from "./stealthAddress";
+
+// Announcement scanner
+export {
+  scanAnnouncements,
+  watchAnnouncements,
+} from "./scanner";
+
+// Chain configuration & constants
+export {
+  UNICHAIN_SEPOLIA,
+  UNICHAIN_MAINNET,
+  UNICHAIN_SEPOLIA_ADDRESSES,
+  UNICHAIN_MAINNET_ADDRESSES,
+  SUPPORTED_CHAINS,
+  getChainConfig,
+  STEALTH_SCHEME_ID,
+  META_ADDRESS_LENGTH,
+  STEALTH_REGISTRY_ABI,
+  ANNOUNCER_ABI,
+  GRIM_POOL_ABI,
+  GRIM_SWAP_ZK_ABI,
+  GROTH16_VERIFIER_ABI,
+} from "./constants";
+
+export type { ChainConfig, GrimAddresses } from "./constants";
 
 // Re-export commonly used utilities
 export { buildPoseidon } from "circomlibjs";

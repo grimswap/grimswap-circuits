@@ -1,7 +1,7 @@
 {
   "name": "@grimswap/circuits",
   "version": "1.0.0",
-  "description": "Groth16 ZK-SNARK circuits and SDK for GrimSwap private swaps",
+  "description": "Groth16 ZK-SNARK circuits for GrimSwap - Poseidon Merkle tree proofs and nullifier verification for private Uniswap v4 swaps",
   "main": "dist/sdk/index.js",
   "types": "dist/sdk/index.d.ts",
   "exports": {
@@ -28,6 +28,8 @@
     "build": "npm run build:sdk"
   },
   "dependencies": {
+    "@noble/curves": "^1.4.0",
+    "@noble/hashes": "^1.4.0",
     "circomlib": "^2.0.5",
     "circomlibjs": "^0.1.7",
     "ethers": "^6.9.0",
@@ -43,10 +45,19 @@
   "keywords": [
     "zk-snark",
     "groth16",
+    "circom",
+    "poseidon",
+    "merkle-tree",
+    "nullifier",
+    "stealth-address",
+    "erc-5564",
     "privacy",
-    "defi",
     "uniswap",
-    "circom"
+    "v4",
+    "defi",
+    "zero-knowledge",
+    "tornado-cash",
+    "grimswap"
   ],
   "author": "GrimSwap",
   "license": "MIT"

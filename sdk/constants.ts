@@ -27,8 +27,8 @@ export interface ChainConfig {
 // ============ Unichain Sepolia (Testnet) ============
 
 export const UNICHAIN_SEPOLIA_ADDRESSES: GrimAddresses = {
-  grimSwapZK: '0x95ED348fCC232FB040e46c77C60308517e4BC0C4',
-  grimPool: '0xad079eAC28499c4eeA5C02D2DE1C81E56b9AA090',
+  grimSwapZK: '0xc52c297f4f0d0556b1cd69b655F23df2513eC0C4',
+  grimPool: '0x023F6b2Bb485A9c77F1b3e4009E58064E53414b9',
   groth16Verifier: '0xF7D14b744935cE34a210D7513471a8E6d6e696a0',
   stealthRegistry: '0xA9e4ED4183b3B3cC364cF82dA7982D5ABE956307',
   announcer: '0x42013A72753F6EC28e27582D4cDb8425b44fd311',

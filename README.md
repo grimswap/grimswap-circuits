@@ -197,6 +197,14 @@ const result = await submitToRelayer(
 | `generateStealthAddress(metaAddress)` | Derive one-time stealth address |
 | `scanAnnouncements(params)` | Scan chain for payments to you |
 
+### Claiming from Stealth Addresses
+
+| Function | Description |
+|----------|-------------|
+| `claimStealthTokens(params)` | Sweep ERC20 tokens from stealth address to your wallet |
+| `getStealthBalance(...)` | Check token balance at stealth address |
+| `getStealthEthBalance(...)` | Check ETH balance (gas availability) |
+
 ### Constants & ABIs
 
 ```typescript
@@ -225,6 +233,8 @@ import type {
   Groth16Proof,
   ContractProof,
   StealthKeys,
+  ClaimParams,
+  ClaimResult,
   GrimAddresses,
   ChainConfig,
 } from "@grimswap/circuits";
@@ -283,6 +293,40 @@ User                    Frontend                  GrimPool          Relayer     
  |  tokens at stealth addr |                         |                 |                |
  |<------------------------|                         |                 |                |
 ```
+
+## 4. Claim Tokens from Stealth Address
+
+After a private swap, tokens land at a stealth address. The relayer automatically funds it with ETH for gas. Use `claimStealthTokens()` to sweep tokens to your wallet:
+
+```typescript
+import {
+  claimStealthTokens,
+  getStealthBalance,
+} from "@grimswap/circuits";
+
+// Check balance first
+const { stealthAddress, balance } = await getStealthBalance(
+  keys.spendingPrivateKey,
+  keys.viewingPrivateKey,
+  stealth.ephemeralPubKey,
+  outputTokenAddress,
+);
+
+console.log(`${balance} tokens at ${stealthAddress}`);
+
+// Sweep tokens to your wallet
+const result = await claimStealthTokens({
+  spendingPrivateKey: keys.spendingPrivateKey,
+  viewingPrivateKey: keys.viewingPrivateKey,
+  ephemeralPubKey: stealth.ephemeralPubKey,
+  tokenAddress: outputTokenAddress,
+  toAddress: "0xYourWallet...",
+});
+
+console.log(result.txHash); // claimed!
+```
+
+No ethers/viem dependency required — works via raw JSON-RPC.
 
 ## Circuit Architecture
 

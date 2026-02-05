@@ -1,118 +1,315 @@
-# GrimSwap ZK Circuits
+# @grimswap/circuits
 
-Groth16 ZK-SNARK circuits for privacy-preserving swaps on Uniswap v4.
+ZK-SNARK SDK for privacy-preserving swaps on Uniswap v4.
 
-## Overview
+Deposit ETH, then swap privately through stealth addresses — no link between depositor and recipient.
 
-This package contains the Circom circuits that prove:
+## Install
 
-1. **Membership**: User has deposited funds (commitment in Merkle tree)
-2. **Non-double-spend**: Nullifier has not been used before
-3. **Validity**: Output goes to a valid stealth address
+```bash
+npm install @grimswap/circuits
+```
+
+## Quick Start (10 lines)
+
+```typescript
+import {
+  createDepositNote,
+  formatCommitmentForContract,
+  executePrivateSwap,
+  UNICHAIN_SEPOLIA_ADDRESSES,
+} from "@grimswap/circuits";
+
+// 1. Create deposit note + deposit on-chain
+const note = await createDepositNote(parseEther("1"));
+const commitment = formatCommitmentForContract(note.commitment);
+// → call GrimPool.deposit(commitment, { value: parseEther("1") })
+// → save note.leafIndex from the Deposit event
+
+// 2. Load circuit files (host on your CDN or copy from node_modules)
+const wasm = await fetch("/circuits/privateSwap.wasm").then(r => r.arrayBuffer());
+const zkey = await fetch("/circuits/privateSwap.zkey").then(r => r.arrayBuffer());
+
+// 3. Execute private swap — builds tree, generates proof, submits to relayer
+const result = await executePrivateSwap({
+  note,
+  recipient: stealthAddress,
+  poolKey: {
+    currency0: "0x0000000000000000000000000000000000000000",
+    currency1: tokenAddress,
+    fee: 3000,
+    tickSpacing: 60,
+    hooks: UNICHAIN_SEPOLIA_ADDRESSES.grimSwapZK,
+  },
+  zeroForOne: true,
+  amountSpecified: -note.amount,
+  wasmBuffer: wasm,
+  zkeyBuffer: zkey,
+});
+
+console.log(result.txHash); // done!
+```
+
+## Setup Circuit Files
+
+Copy the WASM and zkey files to your app's public directory:
+
+```bash
+npx grimswap-copy-circuits public/circuits
+```
+
+Or manually copy from `node_modules/@grimswap/circuits/build/`.
+
+## Step-by-Step Integration
+
+### 1. Deposit
+
+```typescript
+import {
+  createDepositNote,
+  formatCommitmentForContract,
+  serializeNote,
+  GRIM_POOL_ABI,
+  UNICHAIN_SEPOLIA_ADDRESSES,
+} from "@grimswap/circuits";
+
+const note = await createDepositNote(parseEther("1"));
+const commitment = formatCommitmentForContract(note.commitment);
+
+// Deposit on-chain (use viem, ethers, or wagmi)
+const tx = await walletClient.writeContract({
+  address: UNICHAIN_SEPOLIA_ADDRESSES.grimPool,
+  abi: GRIM_POOL_ABI,
+  functionName: "deposit",
+  args: [commitment],
+  value: parseEther("1"),
+});
+
+// Save the note — user needs it to withdraw!
+// Set leafIndex from the Deposit event
+note.leafIndex = depositEvent.args.leafIndex;
+const saved = serializeNote(note);
+localStorage.setItem("grimswap_note", saved);
+```
+
+### 2. Add Merkle Root (Testnet Only)
+
+```typescript
+const { fetchDeposits, buildMerkleTree } = await import("@grimswap/circuits");
+
+const commitments = await fetchDeposits();
+const tree = await buildMerkleTree(commitments);
+const merkleProof = tree.getProof(note.leafIndex);
+
+// Testnet: depositor adds their own root
+const rootHex = "0x" + merkleProof.root.toString(16).padStart(64, "0");
+await walletClient.writeContract({
+  address: UNICHAIN_SEPOLIA_ADDRESSES.grimPool,
+  abi: GRIM_POOL_ABI,
+  functionName: "addKnownRoot",
+  args: [rootHex],
+});
+```
+
+### 3. Private Swap
+
+Use `executePrivateSwap()` (recommended) or build manually:
+
+```typescript
+import {
+  generateProofFromBuffers,
+  formatProofForContract,
+  submitToRelayer,
+  getRelayerInfo,
+} from "@grimswap/circuits";
+
+// Get relayer info
+const relayer = await getRelayerInfo();
+
+// Generate proof
+const { proof, publicSignals } = await generateProofFromBuffers(
+  note, merkleProof,
+  {
+    recipient: stealthAddress,
+    relayer: relayer.address,
+    relayerFee: relayer.fee,
+    expectedAmountOut: note.amount,
+  },
+  wasmBuffer, zkeyBuffer
+);
+
+// Format and submit
+const formatted = formatProofForContract(proof, publicSignals);
+const result = await submitToRelayer(
+  undefined, // uses default relayer URL
+  { a: formatted.pA, b: formatted.pB, c: formatted.pC },
+  formatted.pubSignals,
+  {
+    poolKey,
+    zeroForOne: true,
+    amountSpecified: (-note.amount).toString(),
+    sqrtPriceLimitX96: "4295128740",
+  }
+);
+```
+
+## API Reference
+
+### High-Level
+
+| Function | Description |
+|----------|-------------|
+| `executePrivateSwap(params)` | Complete private swap in one call |
+| `fetchDeposits(rpcUrl?)` | Fetch all deposit commitments from GrimPool |
+| `fetchDepositEvents(rpcUrl?)` | Fetch deposits with full metadata |
+| `getDepositCount(rpcUrl?)` | Get current deposit count |
+
+### Proof Generation
+
+| Function | Environment | Description |
+|----------|-------------|-------------|
+| `generateProofFromBuffers()` | Browser + Node | Generate proof from in-memory buffers |
+| `generateProof()` | Node.js only | Generate proof from file paths |
+| `formatProofForContract()` | Both | Format proof for Solidity |
+
+### Commitment & Merkle Tree
+
+| Function | Description |
+|----------|-------------|
+| `createDepositNote(amount)` | Create deposit note with random secret + nullifier |
+| `formatCommitmentForContract(commitment)` | Format as bytes32 for deposit tx |
+| `serializeNote(note)` / `deserializeNote(str)` | Save/restore note |
+| `buildMerkleTree(commitments)` | Build Poseidon Merkle tree |
+
+### Relayer Client
+
+| Function | Description |
+|----------|-------------|
+| `submitToRelayer(url, proof, signals, swapParams)` | Submit proof for execution |
+| `getRelayerInfo(url?)` | Get relayer address and fee |
+| `checkRelayerHealth(url?)` | Check if relayer is online |
+
+### Stealth Addresses (ERC-5564)
+
+| Function | Description |
+|----------|-------------|
+| `generateStealthKeys()` | Generate spending + viewing key pair |
+| `generateStealthAddress(metaAddress)` | Derive one-time stealth address |
+| `scanAnnouncements(params)` | Scan chain for payments to you |
+
+### Constants & ABIs
+
+```typescript
+import {
+  UNICHAIN_SEPOLIA_ADDRESSES,  // All contract addresses
+  GRIM_POOL_ABI,               // deposit, isSpent, getLastRoot, addKnownRoot
+  GRIM_SWAP_ROUTER_ABI,        // executePrivateSwap
+  GRIM_SWAP_ZK_ABI,            // Hook events
+  GROTH16_VERIFIER_ABI,        // verifyProof
+  RELAYER_DEFAULT_URL,          // https://services.grimswap.com
+} from "@grimswap/circuits";
+```
+
+### Types
+
+```typescript
+import type {
+  DepositNote,
+  MerkleProof,
+  SwapParams,
+  PoolKey,
+  PrivateSwapParams,
+  RelayerRequest,
+  RelayerResponse,
+  DepositEvent,
+  Groth16Proof,
+  ContractProof,
+  StealthKeys,
+  GrimAddresses,
+  ChainConfig,
+} from "@grimswap/circuits";
+```
+
+## Contract Addresses (Unichain Sepolia)
+
+| Contract | Address |
+|----------|---------|
+| GrimPool | `0xEAB5E7B4e715A22E8c114B7476eeC15770B582bb` |
+| GrimSwapZK (Hook) | `0xeB72E2495640a4B83EBfc4618FD91cc9beB640c4` |
+| GrimSwapRouter | `0xC13a6a504da21aD23c748f08d3E991621D42DA4F` |
+| Groth16Verifier | `0xF7D14b744935cE34a210D7513471a8E6d6e696a0` |
+| PoolManager | `0x00B036B58a818B1BC34d502D3fE730Db729e62AC` |
+
+## Pool Configuration
+
+### Fee/TickSpacing
+
+| Fee | TickSpacing | Use Case |
+|-----|-------------|----------|
+| 500 | 10 | Stable pairs |
+| 3000 | 60 | Most pairs |
+| 10000 | 200 | Exotic pairs |
+
+### sqrtPriceX96 for ETH/USDC
+
+For ETH = currency0, USDC = currency1 (6 decimals):
+- $2000/ETH: `3543191142285914205922034`
+- $3000/ETH: `4339505028714986015908034`
+
+Formula: `sqrt(price_usdc * 10^6 / 10^18) * 2^96`
+
+## Integration Flow
+
+```
+User                    Frontend                  GrimPool          Relayer          Router
+ |                         |                         |                 |                |
+ |  deposit 1 ETH          |                         |                 |                |
+ |------------------------>|  deposit(commitment)     |                 |                |
+ |                         |------------------------>|                 |                |
+ |                         |                         |                 |                |
+ |  swap privately         |                         |                 |                |
+ |------------------------>|  executePrivateSwap()    |                 |                |
+ |                         |  1. fetchDeposits()      |                 |                |
+ |                         |  2. buildMerkleTree()    |                 |                |
+ |                         |  3. generateProof()      |                 |                |
+ |                         |  4. submitToRelayer() ---|---------------->|                |
+ |                         |                         |                 |                |
+ |                         |                         |  executePrivateSwap              |
+ |                         |                         |<----------------|--------------->|
+ |                         |                         |                 |                |
+ |                         |  { txHash, success }     |                 |                |
+ |                         |<-----------------------------------------|                |
+ |                         |                         |                 |                |
+ |  tokens at stealth addr |                         |                 |                |
+ |<------------------------|                         |                 |                |
+```
 
 ## Circuit Architecture
 
 ```
-┌─────────────────────────────────────────────────────────────┐
-│                    privateSwap.circom                        │
-├─────────────────────────────────────────────────────────────┤
-│                                                             │
-│  Public Inputs:                                             │
-│  ├── merkleRoot        (current root of deposit tree)       │
-│  ├── nullifierHash     (prevents double-spend)              │
-│  ├── recipient         (stealth address)                    │
-│  └── relayerFee        (fee for gas payment)                │
-│                                                             │
-│  Private Inputs:                                            │
-│  ├── secret            (256-bit random)                     │
-│  ├── nullifier         (256-bit random)                     │
-│  ├── amount            (deposit amount)                     │
-│  ├── pathElements[20]  (Merkle proof siblings)              │
-│  └── pathIndices[20]   (path direction: 0=left, 1=right)    │
-│                                                             │
-│  Constraints:                                               │
-│  1. commitment = Poseidon(nullifier, secret, amount)        │
-│  2. MerkleProof(commitment, path) == merkleRoot             │
-│  3. nullifierHash == Poseidon(nullifier)                    │
-│                                                             │
-└─────────────────────────────────────────────────────────────┘
+Public Inputs:                          Private Inputs:
+  merkleRoot                              secret (256-bit random)
+  nullifierHash                           nullifier (256-bit random)
+  recipient (stealth address)             amount (deposit amount)
+  relayerFee                              pathElements[20] (siblings)
+                                          pathIndices[20] (directions)
+
+Constraints:
+  1. commitment = Poseidon(nullifier, secret, amount)
+  2. MerkleProof(commitment, path) == merkleRoot
+  3. nullifierHash == Poseidon(nullifier)
 ```
 
-## Prerequisites
-
-- Node.js >= 18
-- Circom 2.1.x
-- snarkjs 0.7.x
-
-### Install Circom
-
-```bash
-# Install Rust
-curl --proto '=https' --tlsv1.2 https://sh.rustup.rs -sSf | sh
-
-# Clone and build Circom
-git clone https://github.com/iden3/circom.git
-cd circom
-cargo build --release
-sudo cp target/release/circom /usr/local/bin/
-```
-
-## Installation
+## Building Circuits from Source
 
 ```bash
 npm install
+npm run compile           # Compile Circom circuits
+npm run setup             # Trusted setup (Powers of Tau)
+npm run generate-verifier # Solidity verifier
 ```
 
-## Build
-
-```bash
-# Compile circuits
-npm run compile
-
-# Run trusted setup (uses Powers of Tau)
-npm run setup
-
-# Generate Solidity verifier
-npm run generate-verifier
-
-# Or run all steps:
-npm run build
-```
-
-## Output Files
-
-After building:
-
-```
-build/
-├── privateSwap.r1cs           # Circuit constraints
-├── privateSwap_js/
-│   ├── privateSwap.wasm       # WASM for witness generation
-│   └── witness_calculator.js
-├── privateSwap.zkey           # Proving key
-├── verification_key.json      # Verification key
-└── Groth16Verifier.sol        # Solidity verifier contract
-```
-
-## Testing
-
-```bash
-npm test
-```
-
-## Security
-
-- Uses Poseidon hash (ZK-friendly, ~200 constraints)
-- Merkle tree height: 20 (supports 1,048,576 deposits)
-- Trusted setup: Uses existing Powers of Tau ceremony
-
-## Gas Costs
-
-| Operation | Gas |
-|-----------|-----|
-| Proof verification | ~190,000 |
-| Calldata (472 bytes) | ~8,000 |
-| **Total** | **~198,000** |
+Requires Circom 2.1.x and Node.js >= 18.
 
 ## License
 

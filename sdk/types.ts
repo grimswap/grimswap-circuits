@@ -121,6 +121,50 @@ export interface StealthPayment {
   txHash: Hex;
 }
 
+// ============ Relayer Types ============
+
+export interface RelayerRequest {
+  proof: {
+    a: [string, string];
+    b: [[string, string], [string, string]];
+    c: [string, string];
+  };
+  publicSignals: string[];
+  swapParams: {
+    poolKey: PoolKey;
+    zeroForOne: boolean;
+    amountSpecified: string;
+    sqrtPriceLimitX96: string;
+  };
+}
+
+export interface RelayerResponse {
+  success: boolean;
+  txHash?: string;
+  blockNumber?: number;
+  gasUsed?: string;
+  error?: string;
+}
+
+export interface PoolKey {
+  currency0: Address;
+  currency1: Address;
+  fee: number;
+  tickSpacing: number;
+  hooks: Address;
+}
+
+export interface PrivateSwapConfig {
+  note: DepositNote;
+  merkleProof: MerkleProof;
+  swapParams: SwapParams;
+  poolKey: PoolKey;
+  zeroForOne: boolean;
+  amountSpecified: bigint;
+  sqrtPriceLimitX96: bigint;
+  relayerUrl?: string;
+}
+
 // ============ Scanner Types ============
 
 export interface ScanParams {

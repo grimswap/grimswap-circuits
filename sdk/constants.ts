@@ -10,6 +10,7 @@ type Address = `0x${string}`;
 export interface GrimAddresses {
   grimSwapZK: Address;
   grimPool: Address;
+  grimSwapRouter: Address;
   groth16Verifier: Address;
   stealthRegistry: Address;
   announcer: Address;
@@ -27,8 +28,9 @@ export interface ChainConfig {
 // ============ Unichain Sepolia (Testnet) ============
 
 export const UNICHAIN_SEPOLIA_ADDRESSES: GrimAddresses = {
-  grimSwapZK: '0xc52c297f4f0d0556b1cd69b655F23df2513eC0C4',
-  grimPool: '0x023F6b2Bb485A9c77F1b3e4009E58064E53414b9',
+  grimSwapZK: '0xeB72E2495640a4B83EBfc4618FD91cc9beB640c4',
+  grimPool: '0xEAB5E7B4e715A22E8c114B7476eeC15770B582bb',
+  grimSwapRouter: '0xC13a6a504da21aD23c748f08d3E991621D42DA4F',
   groth16Verifier: '0xF7D14b744935cE34a210D7513471a8E6d6e696a0',
   stealthRegistry: '0xA9e4ED4183b3B3cC364cF82dA7982D5ABE956307',
   announcer: '0x42013A72753F6EC28e27582D4cDb8425b44fd311',
@@ -48,6 +50,7 @@ export const UNICHAIN_SEPOLIA: ChainConfig = {
 export const UNICHAIN_MAINNET_ADDRESSES: GrimAddresses = {
   grimSwapZK: '0x0000000000000000000000000000000000000000', // TODO: Deploy
   grimPool: '0x0000000000000000000000000000000000000000', // TODO: Deploy
+  grimSwapRouter: '0x0000000000000000000000000000000000000000', // TODO: Deploy
   groth16Verifier: '0x0000000000000000000000000000000000000000', // TODO: Deploy
   stealthRegistry: '0x0000000000000000000000000000000000000000', // TODO: Deploy
   announcer: '0x0000000000000000000000000000000000000000', // TODO: Deploy
@@ -155,17 +158,42 @@ export const GRIM_POOL_ABI = [
   },
   {
     type: 'function',
-    name: 'isSpentNullifier',
+    name: 'isSpent',
     inputs: [{ name: 'nullifierHash', type: 'bytes32' }],
     outputs: [{ name: '', type: 'bool' }],
     stateMutability: 'view',
   },
   {
     type: 'function',
-    name: 'getCurrentRoot',
+    name: 'getLastRoot',
     inputs: [],
     outputs: [{ name: '', type: 'bytes32' }],
     stateMutability: 'view',
+  },
+  {
+    type: 'function',
+    name: 'addKnownRoot',
+    inputs: [{ name: 'root', type: 'bytes32' }],
+    outputs: [],
+    stateMutability: 'nonpayable',
+  },
+  {
+    type: 'function',
+    name: 'getDepositCount',
+    inputs: [],
+    outputs: [{ name: '', type: 'uint32' }],
+    stateMutability: 'view',
+  },
+  {
+    type: 'function',
+    name: 'releaseForSwap',
+    inputs: [
+      { name: 'nullifierHash', type: 'bytes32' },
+      { name: 'recipient', type: 'address' },
+      { name: 'amount', type: 'uint256' },
+    ],
+    outputs: [],
+    stateMutability: 'nonpayable',
   },
   {
     type: 'event',
@@ -219,3 +247,44 @@ export const GROTH16_VERIFIER_ABI = [
     stateMutability: 'view',
   },
 ] as const;
+
+export const GRIM_SWAP_ROUTER_ABI = [
+  {
+    type: 'function',
+    name: 'executePrivateSwap',
+    inputs: [
+      {
+        name: 'key',
+        type: 'tuple',
+        components: [
+          { name: 'currency0', type: 'address' },
+          { name: 'currency1', type: 'address' },
+          { name: 'fee', type: 'uint24' },
+          { name: 'tickSpacing', type: 'int24' },
+          { name: 'hooks', type: 'address' },
+        ],
+      },
+      {
+        name: 'params',
+        type: 'tuple',
+        components: [
+          { name: 'zeroForOne', type: 'bool' },
+          { name: 'amountSpecified', type: 'int256' },
+          { name: 'sqrtPriceLimitX96', type: 'uint160' },
+        ],
+      },
+      { name: 'nullifierHash', type: 'bytes32' },
+      { name: 'recipient', type: 'address' },
+      { name: 'relayer', type: 'address' },
+      { name: 'relayerFee', type: 'uint256' },
+      { name: 'pA', type: 'uint256[2]' },
+      { name: 'pB', type: 'uint256[2][2]' },
+      { name: 'pC', type: 'uint256[2]' },
+      { name: 'pubSignals', type: 'uint256[8]' },
+    ],
+    outputs: [{ name: 'amountOut', type: 'uint256' }],
+    stateMutability: 'nonpayable',
+  },
+] as const;
+
+export const RELAYER_DEFAULT_URL = 'https://services.grimswap.com';

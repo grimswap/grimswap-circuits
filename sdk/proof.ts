@@ -5,8 +5,6 @@
  */
 
 import * as snarkjs from "snarkjs";
-import * as path from "path";
-import * as fs from "fs";
 import {
   computeCommitment,
   computeNullifierHash,
@@ -22,9 +20,9 @@ import type {
   ContractProof,
 } from "./types";
 
-// Default paths relative to SDK
+// Default paths relative to SDK (Node.js only)
 const DEFAULT_WASM_PATH = "../build/privateSwap_js/privateSwap.wasm";
-const DEFAULT_ZKEY_PATH = "../setup/privateSwap_final.zkey";
+const DEFAULT_ZKEY_PATH = "../build/privateSwap.zkey";
 
 /**
  * Generate a ZK proof for a private swap
@@ -47,6 +45,10 @@ export async function generateProof(
   publicSignals: string[];
 }> {
   await initPoseidon();
+
+  // Dynamic imports - only loaded when this Node.js function is called
+  const path = require("path") as typeof import("path");
+  const fs = require("fs") as typeof import("fs");
 
   // Resolve paths
   const wasm =
@@ -158,6 +160,10 @@ export async function verifyProofLocally(
   publicSignals: string[],
   vkeyPath?: string
 ): Promise<boolean> {
+  // Dynamic imports - only loaded when this Node.js function is called
+  const path = require("path") as typeof import("path");
+  const fs = require("fs") as typeof import("fs");
+
   const vkey =
     vkeyPath ||
     path.resolve(__dirname, "../setup/verification_key.json");
@@ -231,5 +237,66 @@ export async function computeExpectedPublicSignals(
     relayer: BigInt(swapParams.relayer || "0"),
     relayerFee: BigInt(swapParams.relayerFee || 0),
     swapAmountOut: swapParams.expectedAmountOut,
+  };
+}
+
+/**
+ * Generate a ZK proof from in-memory buffers (browser-compatible)
+ *
+ * Unlike generateProof() which reads files from disk, this accepts
+ * ArrayBuffer/Uint8Array directly - suitable for browser environments
+ * where WASM and zkey are fetched over HTTP or bundled.
+ *
+ * @param note - The deposit note
+ * @param merkleProof - Merkle proof of inclusion
+ * @param swapParams - Swap parameters
+ * @param wasmBuffer - Circuit WASM as ArrayBuffer or Uint8Array
+ * @param zkeyBuffer - Proving key as ArrayBuffer or Uint8Array
+ * @returns Proof and public signals
+ */
+export async function generateProofFromBuffers(
+  note: DepositNote,
+  merkleProof: MerkleProof,
+  swapParams: SwapParams,
+  wasmBuffer: ArrayBuffer | Uint8Array,
+  zkeyBuffer: ArrayBuffer | Uint8Array
+): Promise<{
+  proof: Groth16Proof;
+  publicSignals: string[];
+}> {
+  await initPoseidon();
+
+  const { pathElements, pathIndices } = formatProofForCircuit(merkleProof);
+
+  const input: CircuitInput = {
+    merkleRoot: merkleProof.root.toString(),
+    nullifierHash: note.nullifierHash.toString(),
+    recipient: swapParams.recipient,
+    relayer: swapParams.relayer || "0",
+    relayerFee: (swapParams.relayerFee || 0).toString(),
+    swapAmountOut: swapParams.expectedAmountOut.toString(),
+    secret: note.secret.toString(),
+    nullifier: note.nullifier.toString(),
+    depositAmount: note.amount.toString(),
+    pathElements,
+    pathIndices,
+  };
+
+  const wasm = wasmBuffer instanceof Uint8Array
+    ? wasmBuffer
+    : new Uint8Array(wasmBuffer);
+  const zkey = zkeyBuffer instanceof Uint8Array
+    ? zkeyBuffer
+    : new Uint8Array(zkeyBuffer);
+
+  const { proof, publicSignals } = await snarkjs.groth16.fullProve(
+    input,
+    wasm as any,
+    zkey as any
+  );
+
+  return {
+    proof: proof as Groth16Proof,
+    publicSignals,
   };
 }

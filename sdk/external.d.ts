@@ -29,6 +29,22 @@ declare module "snarkjs" {
       publicSignals: string[];
     }>;
 
+    // Browser-compatible overload: accepts Uint8Array for wasm and zkey
+    function fullProve(
+      input: Record<string, any>,
+      wasmBuffer: Uint8Array,
+      zkeyBuffer: Uint8Array
+    ): Promise<{
+      proof: {
+        pi_a: [string, string, string];
+        pi_b: [[string, string], [string, string], [string, string]];
+        pi_c: [string, string, string];
+        protocol: string;
+        curve: string;
+      };
+      publicSignals: string[];
+    }>;
+
     function verify(
       verificationKey: any,
       publicSignals: string[],

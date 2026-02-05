@@ -60,6 +60,11 @@ export type {
   ContractProof,
   MerkleProof,
   SwapParams,
+  // Relayer Types
+  RelayerRequest,
+  RelayerResponse,
+  PoolKey,
+  PrivateSwapConfig,
   // Stealth Address Types
   StealthKeys,
   GeneratedStealthAddress,
@@ -93,6 +98,7 @@ export {
 // Proof generation
 export {
   generateProof,
+  generateProofFromBuffers,
   formatProofForContract,
   encodeProofAsHookData,
   verifyProofLocally,
@@ -116,6 +122,27 @@ export {
   watchAnnouncements,
 } from "./scanner";
 
+// Relayer client
+export {
+  submitToRelayer,
+  getRelayerInfo,
+  checkRelayerHealth,
+} from "./relayer";
+
+// Deposit reader
+export {
+  fetchDeposits,
+  fetchDepositEvents,
+  getDepositCount,
+} from "./deposits";
+
+export type { DepositEvent } from "./deposits";
+
+// High-level private swap
+export { executePrivateSwap } from "./privateSwap";
+
+export type { PrivateSwapParams } from "./privateSwap";
+
 // Chain configuration & constants
 export {
   UNICHAIN_SEPOLIA,
@@ -130,7 +157,9 @@ export {
   ANNOUNCER_ABI,
   GRIM_POOL_ABI,
   GRIM_SWAP_ZK_ABI,
+  GRIM_SWAP_ROUTER_ABI,
   GROTH16_VERIFIER_ABI,
+  RELAYER_DEFAULT_URL,
 } from "./constants";
 
 export type { ChainConfig, GrimAddresses } from "./constants";

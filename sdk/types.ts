@@ -143,6 +143,8 @@ export interface RelayerResponse {
   txHash?: string;
   blockNumber?: number;
   gasUsed?: string;
+  fundingTxHash?: string;
+  recipientAddress?: string;
   error?: string;
 }
 

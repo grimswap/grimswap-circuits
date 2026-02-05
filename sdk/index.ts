@@ -143,6 +143,15 @@ export { executePrivateSwap } from "./privateSwap";
 
 export type { PrivateSwapParams } from "./privateSwap";
 
+// Stealth address claiming
+export {
+  claimStealthTokens,
+  getStealthBalance,
+  getStealthEthBalance,
+} from "./claim";
+
+export type { ClaimParams, ClaimResult } from "./claim";
+
 // Chain configuration & constants
 export {
   UNICHAIN_SEPOLIA,

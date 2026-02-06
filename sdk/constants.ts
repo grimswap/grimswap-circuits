@@ -1,6 +1,7 @@
 /**
  * GrimSwap Constants
  * Chain configurations, contract addresses, and ABIs
+ * V3: Multi-token support with GrimPoolMultiToken + GrimSwapRouterV2
  */
 
 type Address = `0x${string}`;
@@ -9,12 +10,15 @@ type Address = `0x${string}`;
 
 export interface GrimAddresses {
   grimSwapZK: Address;
-  grimPool: Address;
-  grimSwapRouter: Address;
+  grimPool: Address;           // Legacy single-token pool
+  grimPoolMultiToken: Address; // V3: Multi-token pool (ETH + ERC20)
+  grimSwapRouter: Address;     // Legacy router
+  grimSwapRouterV2: Address;   // V3: Multi-token router
   groth16Verifier: Address;
   stealthRegistry: Address;
   announcer: Address;
   poolManager: Address;
+  usdc: Address;
 }
 
 export interface ChainConfig {
@@ -28,13 +32,21 @@ export interface ChainConfig {
 // ============ Unichain Sepolia (Testnet) ============
 
 export const UNICHAIN_SEPOLIA_ADDRESSES: GrimAddresses = {
-  grimSwapZK: '0x3bee7D1A5914d1ccD34D2a2d00C359D0746400C4', // NEW: fee=3000, tickSpacing=60
+  // V3 Contracts (current)
+  grimSwapZK: '0x6AFe3f3B81d6a22948800C924b2e9031e76E00C4',
+  grimPoolMultiToken: '0x6777cfe2A72669dA5a8087181e42CA3dB29e7710',
+  grimSwapRouterV2: '0x5EE78E89A0d5B4669b05aC8B7D7ea054a08f555f',
+
+  // Legacy V2 (deprecated)
   grimPool: '0xEAB5E7B4e715A22E8c114B7476eeC15770B582bb',
   grimSwapRouter: '0xC13a6a504da21aD23c748f08d3E991621D42DA4F',
+
+  // Shared
   groth16Verifier: '0xF7D14b744935cE34a210D7513471a8E6d6e696a0',
   stealthRegistry: '0xA9e4ED4183b3B3cC364cF82dA7982D5ABE956307',
   announcer: '0x42013A72753F6EC28e27582D4cDb8425b44fd311',
   poolManager: '0x00B036B58a818B1BC34d502D3fE730Db729e62AC',
+  usdc: '0x31d0220469e10c4E71834a79b1f276d740d3768F',
 };
 
 export const UNICHAIN_SEPOLIA: ChainConfig = {
@@ -49,12 +61,15 @@ export const UNICHAIN_SEPOLIA: ChainConfig = {
 
 export const UNICHAIN_MAINNET_ADDRESSES: GrimAddresses = {
   grimSwapZK: '0x0000000000000000000000000000000000000000', // TODO: Deploy
+  grimPoolMultiToken: '0x0000000000000000000000000000000000000000', // TODO: Deploy
+  grimSwapRouterV2: '0x0000000000000000000000000000000000000000', // TODO: Deploy
   grimPool: '0x0000000000000000000000000000000000000000', // TODO: Deploy
   grimSwapRouter: '0x0000000000000000000000000000000000000000', // TODO: Deploy
   groth16Verifier: '0x0000000000000000000000000000000000000000', // TODO: Deploy
   stealthRegistry: '0x0000000000000000000000000000000000000000', // TODO: Deploy
   announcer: '0x0000000000000000000000000000000000000000', // TODO: Deploy
   poolManager: '0x1F98400000000000000000000000000000000004',
+  usdc: '0x0000000000000000000000000000000000000000', // TODO: Add
 };
 
 export const UNICHAIN_MAINNET: ChainConfig = {
@@ -80,12 +95,19 @@ export function getChainConfig(chainId: number): ChainConfig {
   return config;
 }
 
+// ============ Pool Configuration ============
+
+export const POOL_CONFIG = {
+  fee: 500,        // 0.05%
+  tickSpacing: 10,
+  // Price limits for swaps
+  MIN_SQRT_PRICE: 4295128740n,
+  MAX_SQRT_PRICE: 1461446703485210103287273052203988822378723970341n,
+};
+
 // ============ ERC-5564 Constants ============
 
-/** Stealth address scheme ID for secp256k1 */
 export const STEALTH_SCHEME_ID = 1n;
-
-/** Meta-address length: 33 bytes spending + 33 bytes viewing */
 export const META_ADDRESS_LENGTH = 66;
 
 // ============ Contract ABIs ============
@@ -141,6 +163,75 @@ export const ANNOUNCER_ABI = [
   },
 ] as const;
 
+// V3: Multi-token pool ABI
+export const GRIM_POOL_MULTI_TOKEN_ABI = [
+  {
+    type: 'function',
+    name: 'deposit',
+    inputs: [{ name: 'commitment', type: 'bytes32' }],
+    outputs: [],
+    stateMutability: 'payable',
+  },
+  {
+    type: 'function',
+    name: 'depositToken',
+    inputs: [
+      { name: 'commitment', type: 'bytes32' },
+      { name: 'token', type: 'address' },
+      { name: 'amount', type: 'uint256' },
+    ],
+    outputs: [],
+    stateMutability: 'nonpayable',
+  },
+  {
+    type: 'function',
+    name: 'isKnownRoot',
+    inputs: [{ name: 'root', type: 'bytes32' }],
+    outputs: [{ name: '', type: 'bool' }],
+    stateMutability: 'view',
+  },
+  {
+    type: 'function',
+    name: 'nullifierHashes',
+    inputs: [{ name: '', type: 'bytes32' }],
+    outputs: [{ name: '', type: 'bool' }],
+    stateMutability: 'view',
+  },
+  {
+    type: 'function',
+    name: 'addKnownRoot',
+    inputs: [{ name: 'root', type: 'bytes32' }],
+    outputs: [],
+    stateMutability: 'nonpayable',
+  },
+  {
+    type: 'function',
+    name: 'commitmentToken',
+    inputs: [{ name: 'commitment', type: 'bytes32' }],
+    outputs: [{ name: '', type: 'address' }],
+    stateMutability: 'view',
+  },
+  {
+    type: 'function',
+    name: 'commitmentAmount',
+    inputs: [{ name: 'commitment', type: 'bytes32' }],
+    outputs: [{ name: '', type: 'uint256' }],
+    stateMutability: 'view',
+  },
+  {
+    type: 'event',
+    name: 'Deposit',
+    inputs: [
+      { name: 'commitment', type: 'bytes32', indexed: true },
+      { name: 'leafIndex', type: 'uint32', indexed: false },
+      { name: 'token', type: 'address', indexed: true },
+      { name: 'amount', type: 'uint256', indexed: false },
+      { name: 'timestamp', type: 'uint256', indexed: false },
+    ],
+  },
+] as const;
+
+// Legacy pool ABI (for backwards compatibility)
 export const GRIM_POOL_ABI = [
   {
     type: 'function',
@@ -222,13 +313,22 @@ export const GRIM_SWAP_ZK_ABI = [
     stateMutability: 'view',
   },
   {
+    type: 'function',
+    name: 'grimPool',
+    inputs: [],
+    outputs: [{ name: '', type: 'address' }],
+    stateMutability: 'view',
+  },
+  {
     type: 'event',
     name: 'PrivateSwapExecuted',
     inputs: [
-      { name: 'poolId', type: 'bytes32', indexed: true },
       { name: 'nullifierHash', type: 'bytes32', indexed: true },
       { name: 'stealthAddress', type: 'address', indexed: true },
+      { name: 'relayer', type: 'address', indexed: true },
       { name: 'amountOut', type: 'uint256', indexed: false },
+      { name: 'relayerFee', type: 'uint256', indexed: false },
+      { name: 'timestamp', type: 'uint256', indexed: false },
     ],
   },
 ] as const;
@@ -248,6 +348,7 @@ export const GROTH16_VERIFIER_ABI = [
   },
 ] as const;
 
+// Legacy router ABI
 export const GRIM_SWAP_ROUTER_ABI = [
   {
     type: 'function',
@@ -287,4 +388,121 @@ export const GRIM_SWAP_ROUTER_ABI = [
   },
 ] as const;
 
-export const RELAYER_DEFAULT_URL = 'https://services.grimswap.com';
+// V3: Multi-token router ABI
+export const GRIM_SWAP_ROUTER_V2_ABI = [
+  {
+    type: 'function',
+    name: 'executePrivateSwap',
+    inputs: [
+      {
+        name: 'key',
+        type: 'tuple',
+        components: [
+          { name: 'currency0', type: 'address' },
+          { name: 'currency1', type: 'address' },
+          { name: 'fee', type: 'uint24' },
+          { name: 'tickSpacing', type: 'int24' },
+          { name: 'hooks', type: 'address' },
+        ],
+      },
+      {
+        name: 'params',
+        type: 'tuple',
+        components: [
+          { name: 'zeroForOne', type: 'bool' },
+          { name: 'amountSpecified', type: 'int256' },
+          { name: 'sqrtPriceLimitX96', type: 'uint160' },
+        ],
+      },
+      { name: 'nullifierHash', type: 'bytes32' },
+      { name: 'recipient', type: 'address' },
+      { name: 'relayer', type: 'address' },
+      { name: 'relayerFee', type: 'uint256' },
+      { name: 'pA', type: 'uint256[2]' },
+      { name: 'pB', type: 'uint256[2][2]' },
+      { name: 'pC', type: 'uint256[2]' },
+      { name: 'pubSignals', type: 'uint256[8]' },
+    ],
+    outputs: [{ name: 'amountOut', type: 'uint256' }],
+    stateMutability: 'nonpayable',
+  },
+  {
+    type: 'function',
+    name: 'executePrivateSwapToken',
+    inputs: [
+      {
+        name: 'key',
+        type: 'tuple',
+        components: [
+          { name: 'currency0', type: 'address' },
+          { name: 'currency1', type: 'address' },
+          { name: 'fee', type: 'uint24' },
+          { name: 'tickSpacing', type: 'int24' },
+          { name: 'hooks', type: 'address' },
+        ],
+      },
+      {
+        name: 'params',
+        type: 'tuple',
+        components: [
+          { name: 'zeroForOne', type: 'bool' },
+          { name: 'amountSpecified', type: 'int256' },
+          { name: 'sqrtPriceLimitX96', type: 'uint160' },
+        ],
+      },
+      { name: 'inputToken', type: 'address' },
+      { name: 'nullifierHash', type: 'bytes32' },
+      { name: 'recipient', type: 'address' },
+      { name: 'relayer', type: 'address' },
+      { name: 'relayerFee', type: 'uint256' },
+      { name: 'pA', type: 'uint256[2]' },
+      { name: 'pB', type: 'uint256[2][2]' },
+      { name: 'pC', type: 'uint256[2]' },
+      { name: 'pubSignals', type: 'uint256[8]' },
+    ],
+    outputs: [{ name: 'amountOut', type: 'uint256' }],
+    stateMutability: 'nonpayable',
+  },
+  {
+    type: 'event',
+    name: 'PrivateSwapExecuted',
+    inputs: [
+      { name: 'relayer', type: 'address', indexed: true },
+      { name: 'inputToken', type: 'address', indexed: true },
+      { name: 'amount', type: 'uint256', indexed: false },
+      { name: 'timestamp', type: 'uint256', indexed: false },
+    ],
+  },
+] as const;
+
+export const ERC20_ABI = [
+  {
+    type: 'function',
+    name: 'balanceOf',
+    inputs: [{ name: 'account', type: 'address' }],
+    outputs: [{ name: '', type: 'uint256' }],
+    stateMutability: 'view',
+  },
+  {
+    type: 'function',
+    name: 'approve',
+    inputs: [
+      { name: 'spender', type: 'address' },
+      { name: 'amount', type: 'uint256' },
+    ],
+    outputs: [{ name: '', type: 'bool' }],
+    stateMutability: 'nonpayable',
+  },
+  {
+    type: 'function',
+    name: 'allowance',
+    inputs: [
+      { name: 'owner', type: 'address' },
+      { name: 'spender', type: 'address' },
+    ],
+    outputs: [{ name: '', type: 'uint256' }],
+    stateMutability: 'view',
+  },
+] as const;
+
+export const RELAYER_DEFAULT_URL = 'https://relayer.grimswap.xyz';

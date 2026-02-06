@@ -135,6 +135,7 @@ export interface RelayerRequest {
     zeroForOne: boolean;
     amountSpecified: string;
     sqrtPriceLimitX96: string;
+    inputToken?: Address; // V3: For ERC20 swaps (omit for ETH)
   };
 }
 

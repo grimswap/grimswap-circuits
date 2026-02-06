@@ -399,7 +399,7 @@ describe("GrimSwap SDK", function () {
         "0xEAB5E7B4e715A22E8c114B7476eeC15770B582bb"
       );
       expect(addrs.grimSwapZK).to.equal(
-        "0xeB72E2495640a4B83EBfc4618FD91cc9beB640c4"
+        "0x3bee7D1A5914d1ccD34D2a2d00C359D0746400C4"
       );
       expect(addrs.grimSwapRouter).to.equal(
         "0xC13a6a504da21aD23c748f08d3E991621D42DA4F"

@@ -505,4 +505,4 @@ export const ERC20_ABI = [
   },
 ] as const;
 
-export const RELAYER_DEFAULT_URL = 'https://relayer.grimswap.xyz';
+export const RELAYER_DEFAULT_URL = 'https://services.grimswap.com';
